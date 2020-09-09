@@ -29,6 +29,15 @@ class DocumentSelector extends BasePage {
   async identityCardHint() {
     return this.$('li:nth-child(3) .onfido-sdk-ui-DocumentSelector-hint')
   }
+  async unknownIcon() {
+    return this.$('.onfido-sdk-ui-DocumentSelector-icon-national-identity-card')
+  }
+  async unknownLabel() {
+    return this.$('li:nth-child(4) .onfido-sdk-ui-DocumentSelector-label')
+  }
+  async unknownHint() {
+    return this.$('li:nth-child(4) .onfido-sdk-ui-DocumentSelector-hint')
+  }
 
   async verifyTitle(copy) {
     const documentSelectorStrings = copy.document_selector.identity
@@ -54,6 +63,7 @@ class DocumentSelector extends BasePage {
       this.identityCardLabel(),
       documentTypesStrings.national_identity_card
     )
+    verifyElementCopy(this.unknownLabel(), documentTypesStrings.unknown)
   }
 
   async verifyHints(copy) {
@@ -70,12 +80,14 @@ class DocumentSelector extends BasePage {
       this.identityCardHint(),
       documentSelectorStrings.national_identity_card_hint
     )
+    verifyElementCopy(this.unknownHint(), documentSelectorStrings.unknown_hint)
   }
 
   async verifyIcons() {
     this.passportIcon().isDisplayed()
     this.drivingLicenceIcon().isDisplayed()
     this.identityCardIcon().isDisplayed()
+    this.unknownIcon().isDisplayed()
   }
 
   async clickOnPassportIcon() {
@@ -88,6 +100,10 @@ class DocumentSelector extends BasePage {
 
   async clickOnIdentityCardIcon() {
     this.identityCardIcon().click()
+  }
+
+  async clickOnUnknownIcon() {
+    this.unknownIcon().click()
   }
 }
 

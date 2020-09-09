@@ -7,7 +7,10 @@ import {
   uploadLiveVideo,
   sendMultiframeSelfie,
 } from '~utils/onfidoApi'
-import { poaDocumentTypes } from '../DocumentSelector/documentTypes'
+import {
+  idDocumentTypes,
+  poaDocumentTypes,
+} from '../DocumentSelector/documentTypes'
 import Spinner from '../Spinner'
 import Previews from './Previews'
 
@@ -147,8 +150,9 @@ class Confirm extends Component {
 
     if (method === 'document') {
       const isPoA = poaDocumentTypes.includes(poaDocumentType)
-      const shouldDetectGlare = !isOfMimeType(['pdf'], blob) && !isPoA
-      const shouldDetectDocument = !isPoA
+      const isDoc = idDocumentTypes.includes(type) && type !== 'unknown'
+      const shouldDetectGlare = !isOfMimeType(['pdf'], blob) && isDoc
+      const shouldDetectDocument = isDoc
       const validations = {
         ...(shouldDetectDocument ? { detect_document: 'error' } : {}),
         ...(shouldDetectGlare ? { detect_glare: 'warn' } : {}),

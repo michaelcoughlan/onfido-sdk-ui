@@ -109,6 +109,13 @@
                 "webcam": "Position the front of card in the frame (it will be automatically detected)"
             }
         },
+        "unknown": {
+            "front": {
+                "instructions": "Upload the full document from your computer",
+                "title": "Submit the full document page",
+                "webcam": "Position your document in the frame"
+            }
+        },
         "passport": {
             "front": {
                 "instructions": "Upload passport photo page from your computer",
@@ -169,6 +176,9 @@
         },
         "national_identity_card": {
             "message": "Make sure your card details are clear to read, with no blur or glare"
+        },
+        "unknown": {
+            "message": "Make sure your document is clear to read, with no blur or glare"
         },
         "passport": {
             "message": "Make sure your passport details are clear to read, with no blur or glare"
@@ -261,6 +271,7 @@
             "driving_licence_hint": "Front and back",
             "hint": "Select the type of document you would like to upload",
             "national_identity_card_hint": "Front and back",
+            "unknown_hint": "Capture the full document",
             "passport_hint": "Face photo page",
             "title": "Verify your identity"
         },
@@ -405,6 +416,11 @@
                     "instructions": "Take a photo of the front of your card"
                 }
             },
+            "unknown": {
+                "front": {
+                    "instructions": "Take a photo of your document"
+                }
+            },
             "passport": {
                 "front": {
                     "instructions": "Take a photo of your passport photo page"
@@ -425,6 +441,7 @@
         }
     },
     "national_identity_card": "Identity Card",
+    "unknown": "Other document",
     "passport": "Passport",
     "proof_of_address": {
         "guidance": {
@@ -446,6 +463,7 @@
     },
     "short_driving_licence": "license",
     "short_national_identity_card": "card",
+    "short_unknown": "other document",
     "short_passport": "passport",
     "SMS_BODY": "Continue your identity verification by tapping",
     "utility_bill": "Utility Bill",
