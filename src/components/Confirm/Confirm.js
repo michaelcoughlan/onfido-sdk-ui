@@ -187,9 +187,10 @@ class Confirm extends Component {
     if (method === 'document') {
       const isPoA = poaDocumentTypes.includes(poaDocumentType)
       const isDoc = idDocumentTypes.includes(type) && type !== 'unknown'
-      const shouldWarnForImageQuality = !isOfMimeType(['pdf'], blob) && !isPoA && isDoc
-      const shouldDetectDocument = isDoc
+      const shouldWarnForImageQuality =
+        !isOfMimeType(['pdf'], blob) && !isPoA && isDoc
 
+      const shouldDetectDocument = isDoc
       const validations = {
         ...(shouldDetectDocument ? { detect_document: 'error' } : {}),
         ...(shouldWarnForImageQuality
