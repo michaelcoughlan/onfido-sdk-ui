@@ -127,6 +127,7 @@ class CrossDeviceMobileRouter extends Component {
       steps,
       language,
       documentType,
+      idDocumentIssuingCountry,
       poaDocumentType,
       step: userStepIndex,
       clientStepIndex,
@@ -173,6 +174,9 @@ class CrossDeviceMobileRouter extends Component {
       actions.setPoADocumentType(poaDocumentType)
     } else {
       actions.setIdDocumentType(documentType)
+      if (documentType !== 'passport') {
+        actions.setIdDocumentIssuingCountry(idDocumentIssuingCountry)
+      }
     }
     if (enterpriseFeatures) {
       const validEnterpriseFeatures = getEnterpriseFeaturesFromJWT(token)
@@ -210,6 +214,7 @@ class CrossDeviceMobileRouter extends Component {
     const captures = Object.keys(this.props.captures).reduce((acc, key) => {
       const dataWhitelist = [
         'documentType',
+        'idDocumentIssuingCountry',
         'poaDocumentType',
         'id',
         'metadata',
@@ -259,7 +264,6 @@ class CrossDeviceMobileRouter extends Component {
             crossDeviceClientError={this.setError}
           />
         )}
-        )
       </LocaleProvider>
     )
   }
@@ -276,6 +280,7 @@ class MainRouter extends Component {
   generateMobileConfig = () => {
     const {
       documentType,
+      idDocumentIssuingCountry,
       poaDocumentType,
       deviceHasCameraSupport,
       options,
@@ -296,6 +301,7 @@ class MainRouter extends Component {
       urls,
       language,
       documentType,
+      idDocumentIssuingCountry,
       poaDocumentType,
       deviceHasCameraSupport,
       woopraCookie,
@@ -440,35 +446,17 @@ class HistoryRouter extends Component {
   }
 
   formattedError = (response, status) => {
-    if (typeof response === 'string') {
-      // TODO: this if statement should be deleted once all APIs start using the same signature for responses
-      // Currently detect_documents returns just a string. Examples:
-      // `Could not decode token: hello`
-      // `Token has expired.`
-      // Telephony returns the a JSON response
-      // {“unauthorized”:”Could not decode token: hello"}
-      // {"unauthorized":"Token has expired."}
-      // Tickets in backlog to update all APIs to use signature similar to main Onfido API
-      let message
-      try {
-        const jsonRes = JSON.parse(response)
-        message = jsonRes.unauthorized || jsonRes.error || response
-      } catch {
-        // response is just a string so we will return it as the message
-        message = response
-      }
-      const type = message.includes('expired') ? 'expired_token' : 'exception'
-      return { type, message }
-    }
-    const apiError = response.error || {}
+    const errorResponse = response.error || response || {}
+    // TODO: remove once find_document_in_image back-end `/validate_document` returns error response with same signature
+    const isExpiredTokenErrorMessage =
+      typeof response === 'string' && response.includes('expired')
     const isExpiredTokenError =
-      status === 401 && apiError.type === 'expired_token'
+      status === 401 &&
+      (isExpiredTokenErrorMessage || errorResponse.type === 'expired_token')
     const type = isExpiredTokenError ? 'expired_token' : 'exception'
-    // TODO: delete response.reason once `v2/live_video_challenge` endpoints starts using the same signature for responses
-    // `v2/live_video_challenge` returns a generic message for both invalid and expired tokens. Example:
-    // {"reason":"invalid_token","status":"error"}
+    // `/validate_document` returns a string only. Example: "Token has expired."
     // Ticket in backlog to update all APIs to use signature similar to main Onfido API
-    const message = apiError.message || response.reason
+    const message = errorResponse.message || response
     return { type, message }
   }
 
@@ -525,19 +513,40 @@ class HistoryRouter extends Component {
       deviceHasCameraSupport,
     })
 
-  render = (props) => (
-    <StepsRouter
-      {...props}
-      componentsList={this.getComponentsList()}
-      step={this.state.step}
-      disableNavigation={this.disableNavigation()}
-      changeFlowTo={this.changeFlowTo}
-      nextStep={this.nextStep}
-      previousStep={this.previousStep}
-      triggerOnError={this.triggerOnError}
-      back={this.back}
-    />
-  )
+  getDocumentType = () => {
+    const { documentType, steps } = this.props
+    const documentStep = steps.find((step) => step.type === 'document')
+    const documentTypes = documentStep.options?.documentTypes || {}
+    const enabledDocuments = Object.keys(documentTypes)
+    const isSinglePreselectedDocument = enabledDocuments.length === 1
+    if (isSinglePreselectedDocument && !documentType) {
+      return enabledDocuments[0]
+    }
+    return documentType
+  }
+
+  render = (props) => {
+    const firstStep = this.props.steps[0]
+    const isStartingWithWelcomeStep =
+      firstStep === 'welcome' || firstStep.type === 'welcome'
+    const documentType = isStartingWithWelcomeStep
+      ? this.props.documentType
+      : this.getDocumentType()
+    return (
+      <StepsRouter
+        {...props}
+        documentType={documentType}
+        componentsList={this.getComponentsList()}
+        step={this.state.step}
+        disableNavigation={this.disableNavigation()}
+        changeFlowTo={this.changeFlowTo}
+        nextStep={this.nextStep}
+        previousStep={this.previousStep}
+        triggerOnError={this.triggerOnError}
+        back={this.back}
+      />
+    )
+  }
 }
 
 HistoryRouter.defaultProps = {

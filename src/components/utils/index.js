@@ -1,6 +1,7 @@
 import parseUnit from 'parse-unit'
 import { h } from 'preact'
 import enumerateDevices from 'enumerate-devices'
+import detectSystem from './detectSystem'
 
 export const functionalSwitch = (key, hash) => (hash[key] || (() => null))()
 
@@ -127,7 +128,7 @@ export const currentSeconds = () => Math.floor(Date.now() / 1000)
 export const currentMilliseconds = () => new Date().getTime()
 
 export const copyToClipboard = (mobileUrl, callback) => {
-  let tempInput = document.createElement('input')
+  const tempInput = document.createElement('input')
   document.body.appendChild(tempInput)
   tempInput.setAttribute('value', mobileUrl)
   tempInput.select()
@@ -136,8 +137,48 @@ export const copyToClipboard = (mobileUrl, callback) => {
   callback()
 }
 
-export const addDeviceRelatedProperties = (sdkMetadata, isCrossDeviceFlow) => ({
-  ...sdkMetadata,
-  isCrossDeviceFlow,
-  deviceType: isDesktop ? 'desktop' : 'mobile',
-})
+export const addDeviceRelatedProperties = (sdkMetadata, isCrossDeviceFlow) => {
+  const osInfo = detectSystem('os')
+  const browserInfo = detectSystem('browser')
+
+  const system = {
+    ...(osInfo && { os: osInfo.name, os_version: osInfo.version }),
+    ...(browserInfo && {
+      browser: browserInfo.name,
+      browser_version: browserInfo.version,
+    }),
+  }
+
+  return {
+    ...sdkMetadata,
+    isCrossDeviceFlow,
+    deviceType: isDesktop ? 'desktop' : 'mobile',
+    system,
+  }
+}
+
+export const capitalise = (string) => {
+  if (string) {
+    return string.charAt(0).toUpperCase() + string.slice(1)
+  }
+
+  return string
+}
+
+export const hasOnePreselectedDocument = (steps) =>
+  getEnabledDocuments(steps).length === 1
+
+export const getEnabledDocuments = (steps) => {
+  const documentStep = steps.find((step) => step.type === 'document')
+  const docTypes =
+    documentStep && documentStep.options && documentStep.options.documentTypes
+  return docTypes ? Object.keys(docTypes).filter((type) => docTypes[type]) : []
+}
+
+/**
+ * Generate Base64 string from raw string to use as key in iterator
+ * It's necessary to encode and unescape here is to work with non-Latin characters
+ * See more: https://stackoverflow.com/a/26603875
+ */
+export const buildIteratorKey = (value) =>
+  btoa(unescape(encodeURIComponent(value)))

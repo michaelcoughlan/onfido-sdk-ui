@@ -1,6 +1,7 @@
 import { h, Component } from 'preact'
 import classNames from 'classnames'
 import { performHttpReq } from '~utils/http'
+import { formatError } from '~utils/onfidoApi'
 import Spinner from '../../Spinner'
 import Button from '../../Button'
 import CopyLink from './CopyLink'
@@ -14,6 +15,37 @@ import { localised } from '../../../locales'
 import { createSocket } from '~utils/crossDeviceSync'
 import theme from '../../Theme/style.scss'
 import style from './style.scss'
+
+const SECURE_LINK_VIEWS = [
+  {
+    id: 'qr_code',
+    className: 'qrCodeLinkOption',
+    label: 'get_link.link_qr',
+    subtitle: 'get_link.subtitle_qr',
+  },
+  {
+    id: 'sms',
+    className: 'smsLinkOption',
+    label: 'get_link.link_sms',
+    subtitle: 'get_link.subtitle_sms',
+  },
+  {
+    id: 'copy_link',
+    className: 'copyLinkOption',
+    label: 'get_link.link_url',
+    subtitle: 'get_link.subtitle_url',
+  },
+]
+
+const validatesViewIdWithFallback = (viewId) => {
+  const validViewIds = SECURE_LINK_VIEWS.map(({ id }) => id)
+
+  if (validViewIds.includes(viewId)) {
+    return viewId
+  }
+
+  return 'qr_code'
+}
 
 class SmsError extends Component {
   componentDidMount() {
@@ -101,8 +133,12 @@ class CrossDeviceLink extends Component {
 class CrossDeviceLinkUI extends Component {
   constructor(props) {
     super(props)
+
     this.state = {
-      currentViewId: 'qr_code',
+      currentViewId: validatesViewIdWithFallback(
+        props.steps.find(({ type }) => type === 'document')?.options
+          ?._initialCrossDeviceLinkView
+      ),
       sending: false,
       error: {},
       validNumber: true,
@@ -179,7 +215,9 @@ class CrossDeviceLinkUI extends Component {
       contentType: 'application/json',
       token: `Bearer ${token}`,
     }
-    performHttpReq(options, this.handleResponse, this.handleSMSError)
+    performHttpReq(options, this.handleResponse, (request) =>
+      formatError(request, this.handleSMSError)
+    )
   }
 
   getMobileUrl = () => {
@@ -202,14 +240,14 @@ class CrossDeviceLinkUI extends Component {
     const { translate } = this.props
     const { sending, validNumber } = this.state
     const buttonCopyKey = sending
-      ? 'cross_device.link.button_copy.status'
-      : 'cross_device.link.button_copy.action'
+      ? 'get_link.loader_sending'
+      : 'get_link.button_submit'
     const invalidNumber = !validNumber
     return (
       <div>
         <div className={style.smsSection}>
           <div className={style.label}>
-            {translate('cross_device.link.sms_label')}
+            {translate('get_link.number_field_label')}
           </div>
           <div className={style.numberInputSection}>
             <div
@@ -238,7 +276,7 @@ class CrossDeviceLinkUI extends Component {
         <div role="alert" hidden={!invalidNumber}>
           {invalidNumber && (
             <div className={style.numberError}>
-              {translate('errors.invalid_number.message')}
+              {translate('get_link.alert_wrong_number')}
             </div>
           )}
         </div>
@@ -270,63 +308,49 @@ class CrossDeviceLinkUI extends Component {
   render() {
     const { translate, trackScreen } = this.props
     const { error, currentViewId } = this.state
-    const secureLinkViews = [
-      {
-        id: 'qr_code',
-        className: 'qrCodeLinkOption',
-        label: 'cross_device.link.qr_code_option',
-        render: this.renderQrCodeSection,
-      },
-      {
-        id: 'sms',
-        className: 'smsLinkOption',
-        label: 'cross_device.link.sms_option',
-        render: this.renderSmsLinkSection,
-      },
-      {
-        id: 'copy_link',
-        className: 'copyLinkOption',
-        label: 'cross_device.link.copy_link_option',
-        render: this.renderCopyLinkSection,
-      },
-    ]
-    const currentView = secureLinkViews.find(
-      (view) => view.id === currentViewId
-    )
+    const currentViewRender = {
+      qr_code: this.renderQrCodeSection,
+      sms: this.renderSmsLinkSection,
+      copy_link: this.renderCopyLinkSection,
+    }[currentViewId]
+
     return (
       <div className={style.container}>
         {error.type ? (
           <SmsError error={error} trackScreen={trackScreen} />
         ) : (
           <PageTitle
-            title={translate('cross_device.link.title')}
-            subTitle={translate(`cross_device.link.${currentViewId}_sub_title`)}
+            title={translate('get_link.title')}
+            subTitle={translate(
+              SECURE_LINK_VIEWS.find(({ id }) => id === currentViewId).subtitle
+            )}
           />
         )}
         <div className={classNames(theme.thickWrapper, style.secureLinkView)}>
           <div role="region" id="selectedLinkView">
-            {currentView.render()}
+            {currentViewRender()}
           </div>
           <p className={style.styledLabel}>
-            {translate('cross_device.link.options_divider_label')}
+            {translate('get_link.link_divider')}
           </p>
           <div className={style.viewOptions} aria-controls="selectedLinkView">
-            {secureLinkViews
-              .filter((view) => view.id !== this.state.currentViewId)
-              .map((view) => (
-                <button
-                  type="button"
-                  className={classNames(
-                    theme.link,
-                    style.viewOption,
-                    style[view.className]
-                  )}
-                  ref={(node) => (this.viewOptionBtn = node)}
-                  onClick={() => this.handleViewOptionSelect(view.id)}
-                >
-                  {translate(view.label)}
-                </button>
-              ))}
+            {SECURE_LINK_VIEWS.filter(
+              (view) => view.id !== this.state.currentViewId
+            ).map((view) => (
+              <button
+                type="button"
+                className={classNames(
+                  theme.link,
+                  style.viewOption,
+                  style[view.className]
+                )}
+                ref={(node) => (this.viewOptionBtn = node)}
+                onClick={() => this.handleViewOptionSelect(view.id)}
+                key={`view_${view.id}`}
+              >
+                {translate(view.label)}
+              </button>
+            ))}
           </div>
         </div>
       </div>

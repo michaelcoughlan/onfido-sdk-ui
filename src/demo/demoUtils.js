@@ -7,6 +7,49 @@ export const queryParamToValueString = window.location.search
     return a
   }, {})
 
+const getPreselectedDocumentTypes = () => {
+  const preselectedDocumentType = queryParamToValueString.oneDoc
+  if (preselectedDocumentType) {
+    return {
+      [preselectedDocumentType]: true,
+    }
+  } else if (queryParamToValueString.oneDocWithCountrySelection === 'true') {
+    return {
+      driving_licence: true,
+    }
+  } else if (queryParamToValueString.oneDocWithPresetCountry === 'true') {
+    return {
+      driving_licence: {
+        country: 'ESP',
+      },
+    }
+  } else if (queryParamToValueString.multiDocWithPresetCountry === 'true') {
+    return {
+      driving_licence: {
+        country: 'ESP',
+      },
+      national_identity_card: {
+        country: 'MYS',
+      },
+      residence_permit: {
+        country: null,
+      },
+    }
+  } else if (
+    queryParamToValueString.multiDocWithInvalidPresetCountry === 'true'
+  ) {
+    return {
+      driving_licence: {
+        country: 'ES',
+      },
+      national_identity_card: {
+        country: 'XYZ',
+      },
+    }
+  }
+  return {}
+}
+
 export const getInitSdkOptions = () => {
   if (queryParamToValueString.link_id)
     return {
@@ -24,8 +67,6 @@ export const getInitSdkOptions = () => {
         }
       : queryParamToValueString.language
 
-  // FIXME: remove UI tests dependency on useWebcam at line 43
-  //        (useWebcam is meant to only be used to enable document autocapture feature that is still in beta)
   const steps = [
     'welcome',
     queryParamToValueString.poa === 'true' && { type: 'poa' },
@@ -36,8 +77,9 @@ export const getInitSdkOptions = () => {
           queryParamToValueString.useLiveDocumentCapture === 'true',
         uploadFallback: queryParamToValueString.uploadFallback !== 'false',
         useWebcam: queryParamToValueString.useWebcam === 'true',
-        documentTypes:
-          queryParamToValueString.oneDoc === 'true' ? { passport: true } : {},
+        documentTypes: getPreselectedDocumentTypes(),
+        showCountrySelection:
+          queryParamToValueString.oneDocWithCountrySelection === 'true',
         forceCrossDevice: queryParamToValueString.forceCrossDevice === 'true',
       },
     },
@@ -199,3 +241,38 @@ export const commonLanguages = {
 }
 
 export const commonRegions = ['EU', 'US', 'CA']
+
+export const getTokenFactoryUrl = (region) => {
+  switch (region) {
+    case 'US':
+      return process.env.US_JWT_FACTORY
+    case 'CA':
+      return process.env.CA_JWT_FACTORY
+    default:
+      return process.env.JWT_FACTORY
+  }
+}
+
+export const getToken = (hasPreview, url, eventEmitter, onSuccess) => {
+  const request = new XMLHttpRequest()
+  request.open('GET', url, true)
+  request.setRequestHeader(
+    'Authorization',
+    `BASIC ${process.env.SDK_TOKEN_FACTORY_SECRET}`
+  )
+  request.onload = function () {
+    if (request.status >= 200 && request.status < 400) {
+      const data = JSON.parse(request.responseText)
+      if (hasPreview && eventEmitter) {
+        eventEmitter.postMessage({
+          type: 'UPDATE_CHECK_DATA',
+          payload: {
+            applicantId: data.applicant_id,
+          },
+        })
+      }
+      onSuccess(data.message)
+    }
+  }
+  request.send()
+}

@@ -350,7 +350,7 @@ A number of options are available to allow you to customise the SDK:
     The locale tag is also used to override the language of the SMS body for the cross device feature. This feature is owned by Onfido and is currently only supporting English, Spanish, French and German.
 
   - `phrases` (required) : An object containing the keys you want to override and the new values. The keys can be found in [`src/locales/en_US/en_US.json`](src/locales/en_US/en_US.json). They can be passed as a nested object or as a string using the dot notation for nested values. See the examples below.
-  - `mobilePhrases` (optional) : An object containing the keys you want to override and the new values. The values specified within this object are only visible on mobile devices. Please refer to the `mobilePhrases` property in [`src/locales/en_US/en_US.json`](src/locales/en_US/en_US.json).
+  - `mobilePhrases` (optional) : An object containing the keys you want to override and the new values. The values specified within this object are only visible on mobile devices. Please refer to the `mobilePhrases` property in [`src/locales/en_US/en_US.json`](src/locales/en_US/en_US.json). **Note**: support for standalone `mobilePhrases` key will be deprecated soon. Consider nesting it inside `phrases` if applicable.
 
   ```javascript
   language: {
@@ -411,7 +411,9 @@ A number of options are available to allow you to customise the SDK:
 
   ### welcome
 
-  This is the introduction screen of the SDK. Use this to explain to your users that they need to supply identity documents (and face photos/videos) to have their identities verified. The custom options are:
+  This is the introduction screen of the SDK. Use this to explain to your users that they need to supply identity documents (and face photos/videos) to have their identities verified.
+
+  The custom options are:
 
   - `title` (string)
   - `descriptions` ([string])
@@ -419,21 +421,156 @@ A number of options are available to allow you to customise the SDK:
 
   ### document
 
-  This is the identity document capture step. Users will be asked to select the document type and to provide images of their selected document. They will also have a chance to check the quality of the image(s) before confirming.
+  This is the identity document capture step. Users will be asked to select the document type and to provide images of their selected document. For driving licence and national ID card types, the user will be able to see and select the document's issuing country from a list of supported countries. They will also have a chance to check the quality of the image(s) before confirming.
 
   The custom options are:
 
   - `documentTypes` (object)
 
-    The list of document types visible to the user can be filtered by using the `documentTypes` option. The default value for each document type is `true`. If `documentTypes` only includes one document type, users will not see the document selection screen and instead will be taken to the capture screen directly.
+    The list of document types visible to the user can be filtered by using the `documentTypes` option. The default value for each document type is `true`. If `documentTypes` only includes one document type, users will not see either the document selection screen or the country selection screen and instead will be taken to the capture screen directly.
+
+    #### Configuring Country
+
+    The `country` configuration for a document type allows you to specify the issuing country of the document with a 3-letter ISO 3166-1 alpha-3 country code. Users will not see the country selection screen if this is set for a document type.
+
+    **Note**: You can set the country for all document types except **Passport**.
+
+    For example, if you would like to set the country as Spain (ESP) and skip the country selection screen for the driving licence document type only:
+
+    ```json
+    {
+      "steps": [
+        "welcome",
+        {
+          "type": "document",
+          "options": {
+            "documentTypes": {
+              "driving_licence": {
+                "country": "ESP"
+              },
+              "national_identity_card": true,
+              "residence_permit": true
+            }
+          }
+        },
+        "complete"
+      ]
+    }
+    ```
+
+    If you would like to suppress the country selection screen for driving licence but do not want to set a country:
+
+    ```json
+    {
+      "steps": [
+        "welcome",
+        {
+          "type": "document",
+          "options": {
+            "documentTypes": {
+              "driving_licence": {
+                "country": null
+              },
+              "passport": true,
+              "national_identity_card": true
+            }
+          }
+        },
+        "complete"
+      ]
+    }
+    ```
+
+  - `showCountrySelection` (boolean - default: `false`)
+
+    **Note**: Support for the `showCountrySelection` option will be deprecated soon in favour of the per document country configuration detailed above which offers integrators better control.
+
+    The `showCountrySelection` option controls what happens when **only a single document** is preselected in `documentTypes` It has no effect when the SDK has been set up with multiple documents preselected.
+
+    The country selection screen is never displayed for a passport document.
+
+    By default, if only one document type is preselected, and the document type is not `passport`, the country selection screen will not be displayed. If you would like to have this screen displayed still, set `showCountrySelection` to `true`.
 
     ```javascript
     options: {
       documentTypes: {
         passport: boolean,
         driving_licence: boolean,
-        national_identity_card: boolean
-      }
+        national_identity_card: boolean,
+        residence_permit: boolean
+      },
+      showCountrySelection: boolean (note that this will only apply for certain scenarios, see example configurations below)
+    }
+    ```
+
+    #### Example of Document step without Country Selection screen for a preselected non-passport document (default behaviour)
+
+    ```json
+    {
+      "steps": [
+        "welcome",
+        {
+          "type": "document",
+          "options": {
+            "documentTypes": {
+              // Note that only 1 document type is selected here
+              "passport": false,
+              "driving_licence": false,
+              "national_identity_card": true
+            },
+            "showCountrySelection": false
+          }
+        },
+        "complete"
+      ]
+    }
+    ```
+
+    #### Examples of Document step configuration with more than one preselected documents where Country Selection will still be displayed
+
+    **Example 1**
+    All document type options enabled, `"showCountrySelection": false` has no effect
+
+    ```json
+    {
+      "steps": [
+        "welcome",
+        {
+          "type": "document",
+          "options": {
+            "documentTypes": {
+              "passport": true,
+              "driving_licence": true,
+              "national_identity_card": true
+            },
+            "showCountrySelection": false (NOTE: has no effect)
+          }
+        },
+        "complete"
+      ]
+    }
+    ```
+
+    **Example 2**
+    2 document type options enabled, `"showCountrySelection": false` has no effect
+
+    ```json
+    {
+      "steps": [
+        "welcome",
+        {
+          "type": "document",
+          "options": {
+            "documentTypes": {
+              "passport": true,
+              "national_identity_card": true,
+              "driving_licence": false
+            },
+            "showCountrySelection": false (NOTE: has no effect)
+          }
+        },
+        "complete"
+      ]
     }
     ```
 
@@ -622,7 +759,9 @@ Below is the list of potential events currently being tracked by the hook:
 
 ```
 WELCOME - User reached the "Welcome" screen
-DOCUMENT_TYPE_SELECT - User reached the "verify your identity" screen where the type of document to upload can be selected.
+DOCUMENT_TYPE_SELECT - User reached the "Choose document" screen where the type of document to upload can be selected
+ID_DOCUMENT_COUNTRY_SELECT - User reached the "Select issuing country" screen where the the appropriate issuing country can be searched for and selected if supported
+CROSS_DEVICE_START - User reached the "document capture" screen on mobile after visiting the cross-device link
 DOCUMENT_CAPTURE_FRONT - User reached the "document capture" screen for the front side (for one-sided or two-sided document)
 DOCUMENT_CAPTURE_BACK - User reached the "document capture" screen for the back side (for two-sided document)
 DOCUMENT_CAPTURE_CONFIRMATION_FRONT - User reached the "document confirmation" screen for the front side (for one-sided or two-sided document)
@@ -705,7 +844,7 @@ Onfido.init({
 
 Please open an issue through [GitHub](https://github.com/onfido/onfido-sdk-ui/issues). Please be as detailed as you can. Remember **not** to submit your token in the issue. Also check the closed issues to check whether it has been previously raised and answered.
 
-If you have any issues that contain sensitive information please send us an email with the ISSUE: at the start of the subject to [js-sdk@onfido.com](mailto:js-sdk@onfido.com).
+If you have any issues that contain sensitive information please send us an email with the ISSUE: at the start of the subject to [web-sdk@onfido.com](mailto:web-sdk@onfido.com).
 
 Previous version of the SDK will be supported for a month after a new major version release. Note that when the support period has expired for an SDK version, no bug fixes will be provided, but the SDK will keep functioning (until further notice).
 

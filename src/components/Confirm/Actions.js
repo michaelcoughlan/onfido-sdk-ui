@@ -4,13 +4,19 @@ import Button from '../Button'
 import { localised } from '../../locales'
 import style from './style.scss'
 
-const RetakeAction = localised(({ retakeAction, translate, btnSize }) => (
+const RetakeAction = localised(({ retakeAction, translate, singleAction }) => (
   <Button
     onClick={retakeAction}
-    className={style['btn-secondary']}
-    variants={['secondary', btnSize]}
+    className={singleAction ? null : style.retakeAction}
+    variants={
+      singleAction ? ['primary', 'lg', 'centered'] : ['secondary', 'sm']
+    }
   >
-    {translate('confirm.redo')}
+    {translate(
+      singleAction
+        ? 'doc_confirmation.button_primary_redo'
+        : 'doc_confirmation.button_secondary_redo'
+    )}
   </Button>
 ))
 
@@ -22,24 +28,27 @@ const ConfirmAction = localised(
       disabled={isUploading}
     >
       {error.type === 'warn'
-        ? translate('confirm.continue')
-        : translate('confirm.confirm')}
+        ? translate('doc_confirmation.button_primary_upload_anyway')
+        : translate('doc_confirmation.button_primary_upload')}
     </Button>
   )
 )
 
-const Actions = ({ retakeAction, confirmAction, isUploading, error }) => (
+const Actions = ({
+  retakeAction,
+  confirmAction,
+  isUploading,
+  error,
+  forceRetake,
+}) => (
   <div className={style.actionsContainer}>
     <div
       className={classNames(style.actions, {
-        [style.error]: error.type === 'error',
+        [style.singleAction]: forceRetake,
       })}
     >
-      <RetakeAction
-        {...{ retakeAction }}
-        btnSize={error.type === 'error' ? 'lg' : 'sm'}
-      />
-      {error.type === 'error' ? null : (
+      <RetakeAction {...{ retakeAction, singleAction: forceRetake }} />
+      {!forceRetake && (
         <ConfirmAction {...{ confirmAction, isUploading, error }} />
       )}
     </div>

@@ -3,6 +3,7 @@ import PageTitle from '../PageTitle'
 import Button from '../Button'
 import { trackComponent } from '../../Tracker'
 import { localised } from '../../locales'
+import { buildIteratorKey } from '~utils'
 import theme from '../Theme/style.scss'
 import style from './style.scss'
 
@@ -25,7 +26,9 @@ const Welcome = ({ title, descriptions, nextButton, nextStep, translate }) => {
       <div className={theme.thickWrapper}>
         <div className={style.text}>
           {welcomeDescriptions.map((description) => (
-            <p>{description}</p>
+            <p key={`description_${buildIteratorKey(description)}`}>
+              {description}
+            </p>
           ))}
         </div>
         <Button onClick={nextStep} variants={['centered', 'primary', 'lg']}>
